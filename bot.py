@@ -1,22 +1,17 @@
 from flask import Flask, request
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import os
 
-# Load environment variables
-#BOT_TOKEN = os.getenv("8528903183:AAE64cLbQBzBFO5PPNaO0ebgY_kudmJN-c0")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-#GROUP_CHAT_ID = int(os.getenv("-1003528787199"))
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-
 
 flask_app = Flask(__name__)
 
-# Create Telegram application
-app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
+# Create the Telegram app without build()
+app_bot = Application.builder().token(BOT_TOKEN).build()  # still okay, don't call .build() for polling
 
-# Example: /start command
+# Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Send your wedding photos here!")
 
@@ -34,14 +29,14 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app_bot.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_media))
 
-# Telegram webhook endpoint
+# Webhook endpoint
 @flask_app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def webhook():
+async def webhook():
     update = Update.de_json(request.get_json(), app_bot.bot)
-    app_bot.update_queue.put(update)
+    await app_bot.update_queue.put(update)
     return "ok"
 
-# Health check (optional)
+# Health check
 @flask_app.route("/")
 def index():
     return "Bot is running!"
