@@ -11,7 +11,7 @@ GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
-# Initialize Telegram bot application
+# Initialize Telegram bot
 app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
 
 # ---- Bot logic ----
@@ -32,6 +32,8 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_video(GROUP_CHAT_ID, msg.video.file_id, caption=caption)
     elif msg.document:
         await context.bot.send_document(GROUP_CHAT_ID, msg.document.file_id, caption=caption)
+    else:
+        await update.message.reply_text("❌ Only photos, videos, or documents are accepted.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -51,8 +53,13 @@ def webhook():
     app_bot.update_queue.put(update)
     return "OK"
 
+# ---- Run the webhook ----
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     webhook_url = os.environ.get("WEBHOOK_URL")
-    # Start webhook mode
-    app_bot.run_webhook(listen="0.0.0.0", port=port, webhook_url=webhook_url)
+    # Start webhook (do not call run_polling)
+    app_bot.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=webhook_url
+    )
