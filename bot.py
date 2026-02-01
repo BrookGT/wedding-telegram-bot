@@ -4,8 +4,12 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, ContextTypes, filters
 
 # Load environment variables
-BOT_TOKEN = os.getenv("8528903183:AAE64cLbQBzBFO5PPNaO0ebgY_kudmJN-c0")
-GROUP_CHAT_ID = int(os.getenv("-1003528787199"))
+#BOT_TOKEN = os.getenv("8528903183:AAE64cLbQBzBFO5PPNaO0ebgY_kudmJN-c0")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+#GROUP_CHAT_ID = int(os.getenv("-1003528787199"))
+GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+
 
 # Initialize Telegram bot application
 app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
