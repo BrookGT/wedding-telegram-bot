@@ -32,11 +32,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not msg:
+        return
+
     user = update.effective_user
-    if update.message.photo:
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"{user.first_name} sent a photo!")
-    elif update.message.video:
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"{user.first_name} sent a video!")
+    full_name = user.full_name if user and user.full_name else "Unknown"
+    username = f"@{user.username}" if user and user.username else "(no username)"
+    orig_caption = msg.caption or ""
+
+    lines = [
+        f"From: {full_name}",
+        f"Username: {username}",
+    ]
+    if orig_caption:
+        lines.append(f"Caption: {orig_caption}")
+    full_caption = "\n".join(lines)
+
+    if msg.photo:
+        await context.bot.send_photo(chat_id=GROUP_CHAT_ID, photo=msg.photo[-1].file_id, caption=full_caption)
+    elif msg.video:
+        await context.bot.send_video(chat_id=GROUP_CHAT_ID, video=msg.video.file_id, caption=full_caption)
+    elif msg.document:
+        await context.bot.send_document(chat_id=GROUP_CHAT_ID, document=msg.document.file_id, caption=full_caption)
+    else:
+        # Ignore other message types silently
+        return
 
 
 # ------------------------------
@@ -45,7 +66,7 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Disable the legacy Updater to avoid AttributeError
 app_bot = Application.builder().token(BOT_TOKEN).updater(None).build()
 app_bot.add_handler(CommandHandler("start", start))
-app_bot.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_media))
+app_bot.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.Document.ALL, handle_media))
 
 
 # ------------------------------
