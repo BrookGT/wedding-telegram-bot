@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
 # Load environment variables
 #BOT_TOKEN = os.getenv("8528903183:AAE64cLbQBzBFO5PPNaO0ebgY_kudmJN-c0")
@@ -11,20 +11,19 @@ GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
-# Initialize Telegram bot
-app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
+# Initialize the bot application
+app_bot = Application.builder().token(BOT_TOKEN).build()
 
-# ---- Bot logic ----
+# Handlers
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("💍 Welcome! Send your wedding photos or videos here 📸")
+
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     msg = update.message
     username = f"@{user.username}" if user.username else "No username"
 
-    caption = (
-        f"📸 Wedding Upload\n"
-        f"👤 Name: {user.full_name}\n"
-        f"🔗 Username: {username}"
-    )
+    caption = f"📸 Wedding Upload\n👤 Name: {user.full_name}\n🔗 Username: {username}"
 
     if msg.photo:
         await context.bot.send_photo(GROUP_CHAT_ID, msg.photo[-1].file_id, caption=caption)
@@ -35,16 +34,11 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ Only photos, videos, or documents are accepted.")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "💍 Welcome! Send your wedding photos or videos here 📸"
-    )
-
 # Add handlers
 app_bot.add_handler(CommandHandler("start", start))
 app_bot.add_handler(MessageHandler(filters.ALL, handle_media))
 
-# ---- Flask server for webhook ----
+# Flask server for webhook
 flask_app = Flask(__name__)
 
 @flask_app.route("/", methods=["POST"])
@@ -53,11 +47,10 @@ def webhook():
     app_bot.update_queue.put(update)
     return "OK"
 
-# ---- Run the webhook ----
+# Start webhook
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", 5000))
     webhook_url = os.environ.get("WEBHOOK_URL")
-    # Start webhook (do not call run_polling)
     app_bot.run_webhook(
         listen="0.0.0.0",
         port=port,
