@@ -11,7 +11,7 @@ GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
-# Initialize the bot application
+# Create the Application (no polling)
 app_bot = Application.builder().token(BOT_TOKEN).build()
 
 # Handlers
@@ -34,11 +34,10 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ Only photos, videos, or documents are accepted.")
 
-# Add handlers
 app_bot.add_handler(CommandHandler("start", start))
 app_bot.add_handler(MessageHandler(filters.ALL, handle_media))
 
-# Flask server for webhook
+# Flask app to receive webhook
 flask_app = Flask(__name__)
 
 @flask_app.route("/", methods=["POST"])
@@ -47,10 +46,10 @@ def webhook():
     app_bot.update_queue.put(update)
     return "OK"
 
-# Start webhook
+# Run webhook if executed directly
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    webhook_url = os.environ.get("WEBHOOK_URL")
+    webhook_url = os.environ.get("WEBHOOK_URL")  # Your deployed Render URL
     app_bot.run_webhook(
         listen="0.0.0.0",
         port=port,
