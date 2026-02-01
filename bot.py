@@ -1,45 +1,91 @@
+import os
 from flask import Flask, request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-import os
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
+# ------------------------------
+# Load environment variables
+# ------------------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
+# Example: WEBHOOK_URL = "https://your-render-url.com/" + BOT_TOKEN
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+# ------------------------------
+# Flask app
+# ------------------------------
 flask_app = Flask(__name__)
 
-# Create the Telegram app without build()
-app_bot = Application.builder().token(BOT_TOKEN).build()  # still okay, don't call .build() for polling
+# ------------------------------
+# Telegram Application (no polling!)
+# ------------------------------
+# This will be used for webhook updates
+app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Command /start
+# ------------------------------
+# Command Handlers
+# ------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send your wedding photos here!")
+    await update.message.reply_text(
+        "Hi! Send your wedding photos or videos here, and I'll forward them to the group."
+    )
+
 
 app_bot.add_handler(CommandHandler("start", start))
 
-# Handle photos & videos
+# ------------------------------
+# Media Handler (photos/videos)
+# ------------------------------
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if update.message.photo:
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID,
-                                       text=f"{user.first_name} sent a photo!")
+        await context.bot.send_message(
+            chat_id=GROUP_CHAT_ID,
+            text=f"{user.first_name} sent a photo!"
+        )
     elif update.message.video:
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID,
-                                       text=f"{user.first_name} sent a video!")
+        await context.bot.send_message(
+            chat_id=GROUP_CHAT_ID,
+            text=f"{user.first_name} sent a video!"
+        )
+
 
 app_bot.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_media))
 
-# Webhook endpoint
+# ------------------------------
+# Webhook endpoint for Telegram
+# ------------------------------
 @flask_app.route(f"/{BOT_TOKEN}", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(), app_bot.bot)
-    await app_bot.update_queue.put(update)
-    return "ok"
+def webhook():
+    """Receives updates from Telegram via POST"""
+    from telegram import Bot
+    from telegram.ext import updatequeue
 
-# Health check
+    # Convert JSON into a Telegram Update object
+    update = Update.de_json(request.get_json(force=True), app_bot.bot)
+
+    # Put the update into the bot's update queue
+    # Must run synchronously because Flask route is sync
+    import asyncio
+    asyncio.get_event_loop().create_task(app_bot.update_queue.put(update))
+
+    return "ok", 200
+
+# ------------------------------
+# Health Check endpoint
+# ------------------------------
 @flask_app.route("/")
 def index():
     return "Bot is running!"
 
+# ------------------------------
+# Main entry (Flask only, no polling!)
+# ------------------------------
 if __name__ == "__main__":
-    flask_app.run(port=5000)
+    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
