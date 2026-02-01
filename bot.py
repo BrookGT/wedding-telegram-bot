@@ -31,6 +31,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi! Send your wedding photos or videos here!")
 
 
+async def chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if not chat:
+        return
+    await update.message.reply_text(f"chat_id: {chat.id}")
+
+
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
@@ -66,6 +73,7 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Disable the legacy Updater to avoid AttributeError
 app_bot = Application.builder().token(BOT_TOKEN).updater(None).build()
 app_bot.add_handler(CommandHandler("start", start))
+app_bot.add_handler(CommandHandler("id", chat_id))
 app_bot.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.Document.ALL, handle_media))
 
 
